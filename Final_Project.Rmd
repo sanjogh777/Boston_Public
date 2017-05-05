@@ -1,0 +1,137 @@
+---
+title: "Final Project"
+author: "Sanjog, Sanjog_Handique@student.uml.edu"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+
+## *AIM*
+The aim of the project is to predict if the FIO car stops by the police in the Boston area is at any point racially inclined. 
+
+
+## *INTRODUCTION*
+- Stops had been increasing steadily from 2003 to 2014. The percentage of stopped people who were black was consistently 3.5-6.5 times higher than the percentage of stopped persons who were white according to the survey conducted by Stanford University in North Dakota.
+
+- Through the data provided by "data.cityofboston.gov", Boston Police Department FIO data is analyzed using R-Programming language and using the Machine Learning technique named as "Logistic Regression", the prediction of **Given a person's racial identity, if he would be stopped in the Boston area** is realized. The data has 44 columns such as City, FIO Date, Priors, Race etc. many of which are redundant.  
+
+
+## *METHODS* 
+*Reading the data*
+- The data **Boston_Police_Department_FIO.csv** is downloaded and read through the command "read.csv". It contains many columns which are redundant. So I deleted the redundant columns using "select" function from the "Dplyr" library. 
+Following is the sample of the data:
+
+
+```{r, echo=FALSE}
+df <- read.csv("Boston_Police_Department_FIO.csv")
+print(head(df))
+```
+
+
+*Cleaning the data*
+- Since most of the columns were not making sense either due to redundancy or categorical data which were completely non related to the aim, I had to minimize the no. of columns to just the race of the person "RACE_DESC" and Boston area classification by comparing "DIST_ID" and "CITY" columns. Hence I separated these two columns and saved it in an object called "new.data".
+
+
+- Through some EDA using Barplot, I could find out that District ID codes D4, A1 and A7 belong to the Boston area. So by making a function which used If-Else conditions, I could separate the "DIST_ID" column into 2 parts - those who were stopped "in Boston" and "not in Boston".
+
+
+- Then the missing entries in the dataset could be realized using a function **missMaps()** from a library called **"Amelia"** which gives us visualization of the missing entry in the dataset.Then using **sapply** function, I changed the datatype of the columns to **factor**. Using **na.omit()** function, I imputed the NA entries.
+
+- EDA is done using barplot in GGPLOT2 to visualize the number of people from different ethnicities who were stopped by the Boston police.And clearly the combination of "Black, Hispanic, Indian" people outnumber the people "white" people being stopped for FIO.
+
+- The final dataframe looks like this.
+```{r, echo=FALSE}
+library(dplyr)
+library(Amelia)
+new.data <- select(df, RACE_DESC, DIST_ID)
+district.class <- function(dist1)
+{
+  if (dist1 == 1 | dist1 == 8 | dist1 == 2)
+  {
+    return("In Boston")
+  }
+  else
+  {
+    return("Not in Boston")
+  }
+}
+
+new.data$DIST_ID <- sapply(new.data$DIST_ID, district.class)
+new.data[new.data == "NO DATA ENTERED"] <- NA
+new.data[new.data == "UNKNOWN"] <- NA
+new.data[new.data == ""] <- NA
+new.data <- na.omit(new.data)
+
+new.data$RACE_DESC <- sapply(new.data$RACE_DESC, factor)
+new.data$DIST_ID <- sapply(new.data$DIST_ID, factor)
+```
+
+
+```{r, echo=FALSE}
+print(head(new.data))
+
+```
+
+
+*Train, Test and Split the data.*
+- Before we could do prediction using Logistic Regression, we need to separate training data from test data. A library called "caTools" has been used for that. 
+
+- 70% of the data has been assigned as training set and the rest 30% as a test set.
+
+
+*Prediction*
+- Classification technique called Logistic Regression is used to predict the test data. It's done by using a function called **glm()** function which is used to model the data using the train set.
+
+- For prediction, **predict()** function is used. It uses the already defined test data.
+
+
+*Model Evaluation*
+- The prediction model is evaluated using **Confusion Matrix** which is a table to predict accuracy based on True and False Positives and Negatives.The accuracy can be calculated as (True Positive + True Negative)/(True Positive + True Negative + False Positive + False Negative).
+
+
+## *RESULS*
+
+*EDA*
+- To visualize the stops in the Boston area and Non- Boston area for different ethnicities. Clearly the overall colored people being stopped are more than white people in Boston.
+
+```{r, echo=FALSE}
+library(ggplot2)
+eda <- ggplot(new.data, aes(RACE_DESC)) + geom_bar(aes(fill = DIST_ID), color = 'black') + theme_bw()
+print(eda)
+
+```
+
+
+*Model Evaluation using Confusion matrix*
+
+```{r, echo=FALSE}
+library(caTools)
+set.seed(101)
+sample <- sample.split(new.data$DIST_ID, SplitRatio = 0.7)
+train <- subset(new.data, sample == T)
+test <- subset(new.data, sample == F)
+model <- glm(DIST_ID ~ . , family = binomial(link = 'logit'), data = train)
+test$Predicted.DIST_ID <- predict(model, newdata = test, type = 'response')
+
+table(test$DIST_ID, test$Predicted.DIST_ID > 0.5)
+acc <- (32582+83)/(32582+83+65+10945)
+print("Accuracy (%) =")
+print(acc*100)
+```
+
+- As we can see, the accuracy is around 75% which is fine taking into consideration the logistic regression model which is not the best models for non - linear models.
+
+
+## *CONCLUSION*
+- The accuracy of the models predicted is around 75% which is not so great but if we work on taking into consideration a few more variables and refining them and using a better machine learning algorithms such as Naive Bayes Model or Deep Learning algorithms, the accuracy can definitely be increased.
+
+- Here we learned that there are many criteria, considered by the police to stop a vehicle and not just on the basis of ethnicity. Again it varies from region to region. Maybe the North Dakota region is majorly populated with people of colored ethnicity, hence the test conducted by Standford University may have different results in Boston as Boston is very multi - ethnic.
+
+
+### References
+- Data downloaded from <http://data.cityofboston.gov>
+- Basic graphs by Quick R-<http://www.statmethods.net/>
+- RStudio cheatsheet.
+- Youtube.com - Datacamp videos on R.
+
